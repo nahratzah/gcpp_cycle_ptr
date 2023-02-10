@@ -2,8 +2,6 @@
 #include "UnitTest++/UnitTest++.h"
 #include "create_destroy_check.h"
 
-using namespace cycle_ptr;
-
 struct csc_container {
   constexpr csc_container(bool* destroyed) noexcept
   : data(destroyed)
@@ -14,13 +12,17 @@ struct csc_container {
 };
 
 TEST(gptr_constructor) {
-  CHECK(make_cycle<int>(4) != nullptr);
+  cpp2::gc gc;
+
+  CHECK(gc.make<int>(4) != nullptr);
 }
 
 TEST(destructor) {
+  cpp2::gc gc;
+
   bool destroyed = false;
-  cycle_gptr<create_destroy_check> ptr =
-      make_cycle<create_destroy_check>(&destroyed);
+  cpp2::gc::gptr<create_destroy_check> ptr =
+      gc.make<create_destroy_check>(&destroyed);
   REQUIRE CHECK(ptr != nullptr);
 
   CHECK(!destroyed);
@@ -29,10 +31,12 @@ TEST(destructor) {
 }
 
 TEST(share) {
+  cpp2::gc gc;
+
   bool destroyed = false;
-  cycle_gptr<create_destroy_check> ptr_1 =
-      make_cycle<create_destroy_check>(&destroyed);
-  cycle_gptr<create_destroy_check> ptr_2 = ptr_1;
+  cpp2::gc::gptr<create_destroy_check> ptr_1 =
+      gc.make<create_destroy_check>(&destroyed);
+  cpp2::gc::gptr<create_destroy_check> ptr_2 = ptr_1;
   REQUIRE CHECK(ptr_1 != nullptr);
   REQUIRE CHECK(ptr_2 != nullptr);
 
@@ -44,11 +48,13 @@ TEST(share) {
 }
 
 TEST(alias) {
+  cpp2::gc gc;
+
   bool destroyed = false;
-  cycle_gptr<csc_container> ptr_1 =
-      make_cycle<csc_container>(&destroyed);
+  cpp2::gc::gptr<csc_container> ptr_1 =
+      gc.make<csc_container>(&destroyed);
   REQUIRE CHECK(ptr_1 != nullptr);
-  auto alias = cycle_gptr<int>(ptr_1, &ptr_1->foo);
+  auto alias = cpp2::gc::gptr<int>(ptr_1, &ptr_1->foo);
   REQUIRE CHECK(alias != nullptr);
 
   const int*const foo_addr = &ptr_1->foo;

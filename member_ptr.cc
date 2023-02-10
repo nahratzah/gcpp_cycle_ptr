@@ -3,31 +3,29 @@
 #include <vector>
 #include "create_destroy_check.h"
 
-using namespace cycle_ptr;
-
 class owner
 : public create_destroy_check
 {
  public:
   owner(bool* destroyed_owner, bool* destroyed_target)
   : create_destroy_check(destroyed_owner),
-    target(make_cycle<create_destroy_check>(destroyed_target))
+    target(cpp2::gc().make<create_destroy_check>(destroyed_target))
   {}
 
   explicit owner(bool* destroyed_owner)
   : create_destroy_check(destroyed_owner)
   {}
 
-  cycle_member_ptr<create_destroy_check> target;
+  cpp2::gc::member_ptr<create_destroy_check> target;
 };
 
 class owner_of_collection
-: public cycle_base
+: public cycle_ptr::cycle_base
 {
  public:
   using vector_type = std::vector<
-      cycle_member_ptr<create_destroy_check>,
-      cycle_allocator<std::allocator<cycle_member_ptr<create_destroy_check>>>>;
+      cpp2::gc::member_ptr<create_destroy_check>,
+      cpp2::gc::allocator<cpp2::gc::member_ptr<create_destroy_check>>>;
 
   owner_of_collection()
   : data(vector_type::allocator_type(*this))
@@ -62,20 +60,24 @@ class owner_of_collection
 };
 
 TEST(member_ptr_constructor) {
+  cpp2::gc gc;
+
   bool owner_destroyed = false;
   bool target_destroyed = false;
-  CHECK(make_cycle<owner>(&owner_destroyed, &target_destroyed)->target != nullptr);
+  CHECK(gc.make<owner>(&owner_destroyed, &target_destroyed)->target != nullptr);
 
   CHECK(owner_destroyed);
   CHECK(target_destroyed);
 }
 
 TEST(assignment) {
+  cpp2::gc gc;
+
   bool owner_destroyed = false;
   bool target_destroyed = false;
-  cycle_gptr<owner> ptr_1 = make_cycle<owner>(&owner_destroyed);
+  cpp2::gc::gptr<owner> ptr_1 = gc.make<owner>(&owner_destroyed);
 
-  ptr_1->target = make_cycle<create_destroy_check>(&target_destroyed);
+  ptr_1->target = gc.make<create_destroy_check>(&target_destroyed);
   CHECK(ptr_1->target != nullptr);
   CHECK(!owner_destroyed);
   CHECK(!target_destroyed);
@@ -86,8 +88,10 @@ TEST(assignment) {
 }
 
 TEST(null_pointee) {
+  cpp2::gc gc;
+
   bool owner_destroyed = false;
-  cycle_gptr<owner> ptr_1 = make_cycle<owner>(&owner_destroyed);
+  cpp2::gc::gptr<owner> ptr_1 = gc.make<owner>(&owner_destroyed);
 
   REQUIRE CHECK(ptr_1->target == nullptr);
   CHECK(!owner_destroyed);
@@ -97,8 +101,10 @@ TEST(null_pointee) {
 }
 
 TEST(self_reference) {
+  cpp2::gc gc;
+
   bool destroyed = false;
-  cycle_gptr<owner> ptr = make_cycle<owner>(&destroyed);
+  cpp2::gc::gptr<owner> ptr = gc.make<owner>(&destroyed);
   ptr->target = ptr;
 
   CHECK(!destroyed);
@@ -107,10 +113,12 @@ TEST(self_reference) {
 }
 
 TEST(cycle) {
+  cpp2::gc gc;
+
   bool first_destroyed = false;
   bool second_destroyed = false;
-  cycle_gptr<owner> ptr_1 = make_cycle<owner>(&first_destroyed);
-  cycle_gptr<owner> ptr_2 = make_cycle<owner>(&second_destroyed);
+  cpp2::gc::gptr<owner> ptr_1 = gc.make<owner>(&first_destroyed);
+  cpp2::gc::gptr<owner> ptr_2 = gc.make<owner>(&second_destroyed);
   ptr_1->target = ptr_2;
   ptr_2->target = ptr_1;
 
@@ -130,31 +138,36 @@ TEST(cycle) {
 }
 
 TEST(move_seq) {
-  std::vector<cycle_gptr<create_destroy_check>> pointers;
+  cpp2::gc gc;
+
+  std::vector<cpp2::gc::gptr<create_destroy_check>> pointers;
   std::generate_n(
       std::back_inserter(pointers),
       10'000,
-      []() {
-        return make_cycle<create_destroy_check>();
+      [&gc]() {
+        return gc.make<create_destroy_check>();
       });
 
-  auto ooc = make_cycle<owner_of_collection>(pointers.cbegin(), pointers.cend());
+  auto ooc = gc.make<owner_of_collection>(pointers.cbegin(), pointers.cend());
 }
 
 TEST(expired_can_assign) {
+  cpp2::gc gc;
+
   struct testclass {
     bool* td_ptr;
-    cycle_member_ptr<create_destroy_check> ptr;
+    cpp2::gc::member_ptr<create_destroy_check> ptr;
 
     explicit testclass(bool* td_ptr) : td_ptr(td_ptr) {}
     ~testclass() noexcept(false) { // Test runs during the destructor.
-      ptr = make_cycle<create_destroy_check>(td_ptr);
+      cpp2::gc gc;
+      ptr = gc.make<create_destroy_check>(td_ptr);
       CHECK_EQUAL(nullptr, ptr);
     }
   };
 
   bool destroyed = false;
-  auto tc = make_cycle<testclass>(&destroyed);
+  auto tc = gc.make<testclass>(&destroyed);
   REQUIRE CHECK(tc != nullptr);
   tc.reset();
   REQUIRE CHECK(tc == nullptr);
@@ -163,11 +176,13 @@ TEST(expired_can_assign) {
 }
 
 TEST(expired_can_reset) {
+  cpp2::gc gc;
+
   struct testclass {
-    cycle_member_ptr<int> ptr;
+    cpp2::gc::member_ptr<int> ptr;
 
     testclass()
-    : ptr(make_cycle<int>())
+    : ptr(cpp2::gc().make<int>())
     {}
 
     ~testclass() noexcept(false) { // Test runs during the destructor.
@@ -177,20 +192,22 @@ TEST(expired_can_reset) {
     }
   };
 
-  auto tc = make_cycle<testclass>();
+  auto tc = gc.make<testclass>();
   REQUIRE CHECK(tc != nullptr);
   tc.reset();
   REQUIRE CHECK(tc == nullptr);
 }
 
 TEST(expired_can_create_gptr_but_wont_resurrect) {
-  struct testclass {
-    cycle_gptr<int>& gptr;
-    cycle_member_ptr<int> ptr;
+  cpp2::gc gc;
 
-    testclass(cycle_gptr<int>& gptr)
+  struct testclass {
+    cpp2::gc::gptr<int>& gptr;
+    cpp2::gc::member_ptr<int> ptr;
+
+    testclass(cpp2::gc::gptr<int>& gptr)
     : gptr(gptr),
-      ptr(make_cycle<int>())
+      ptr(cpp2::gc().make<int>())
     {}
 
     ~testclass() { // Test runs during the destructor.
@@ -198,8 +215,8 @@ TEST(expired_can_create_gptr_but_wont_resurrect) {
     }
   };
 
-  cycle_gptr<int> gptr = make_cycle<int>(42);
-  auto tc = make_cycle<testclass>(gptr);
+  cpp2::gc::gptr<int> gptr = gc.make<int>(42);
+  auto tc = gc.make<testclass>(gptr);
   REQUIRE CHECK(tc != nullptr);
   tc.reset();
   REQUIRE CHECK(tc == nullptr);

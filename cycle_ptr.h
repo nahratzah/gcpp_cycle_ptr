@@ -110,6 +110,7 @@ class gc {
   public:
   template<typename T> using member_ptr = ::cycle_ptr::cycle_member_ptr<T>;
   template<typename T> using gptr = ::cycle_ptr::cycle_gptr<T>;
+  template<typename T> using allocator = ::cycle_ptr::cycle_allocator<std::allocator<T>>;
 
   template<typename T, typename... Args>
   auto make(Args&&... args) -> gptr<T>;
