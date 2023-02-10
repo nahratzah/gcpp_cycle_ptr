@@ -3,3 +3,6 @@ project (gcpp_cycle_ptr)
 
 add_executable(cycle_ptr_test test.cc gptr.cc member_ptr.cc)
 target_compile_features (cycle_ptr_test PUBLIC cxx_std_17)
+
+add_subdirectory(unittest-cpp)
+target_link_libraries(cycle_ptr_test PRIVATE UnitTest++)

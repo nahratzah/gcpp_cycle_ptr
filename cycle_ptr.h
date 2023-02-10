@@ -107,11 +107,11 @@ namespace cpp2 {
 
 class gc {
   public:
-  template<typename T> using member_ptr = ::cycle_ptr::member_ptr<T>;
-  template<typename T> using gptr = ::cycle_ptr::gptr<T>;
+  template<typename T> using member_ptr = ::cycle_ptr::cycle_member_ptr<T>;
+  template<typename T> using gptr = ::cycle_ptr::cycle_gptr<T>;
 
   template<typename T, typename... Args>
-  auto new(Args&&... args) -> gptr<T>;
+  auto make(Args&&... args) -> gptr<T>;
 
   template<typename T, typename Allocator, typename... Args>
   auto allocate(Allocator allocator, Args&&... args) -> gptr<T>;
@@ -6698,13 +6698,13 @@ namespace cpp2 {
 
 
 template<typename T, typename... Args>
-inline auto gc::new(Args&&... args) -> gptr<T> {
+inline auto gc::make(Args&&... args) -> gptr<T> {
   return ::cycle_ptr::make_cycle<T>(std::forward<Args>(args)...);
 }
 
 
 template<typename T, typename Allocator, typename... Args>
-inline auto gc::new(Allocator allocator, Args&&... args) -> gptr<T> {
+inline auto gc::allocate(Allocator allocator, Args&&... args) -> gptr<T> {
   return ::cycle_ptr::allocate_cycle<T>(std::move(allocator), std::forward<Args>(args)...);
 }
 
