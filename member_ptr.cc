@@ -1,27 +1,9 @@
 #include "cycle_ptr.h"
 #include "UnitTest++/UnitTest++.h"
 #include <vector>
+#include "create_destroy_check.h"
 
 using namespace cycle_ptr;
-
-class create_destroy_check {
- public:
-  constexpr create_destroy_check() noexcept = default;
-
-  constexpr create_destroy_check(bool* destroyed) noexcept
-  : destroyed(destroyed)
-  {}
-
-  ~create_destroy_check() {
-    if (destroyed != nullptr) {
-      CHECK(!*destroyed); // Check that we're only destroyed once.
-      *destroyed = true;
-    }
-  }
-
- private:
-  bool* destroyed = nullptr;
-};
 
 class owner
 : public create_destroy_check
