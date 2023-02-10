@@ -6,6 +6,7 @@
  * Copy based on git-sha 9f259cd6aae97bf7284427730de06c95f6ca5968
  */
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cassert>
