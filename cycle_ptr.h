@@ -1392,7 +1392,7 @@ class hazard {
                 expect,
                 target,
                 std::memory_order_acquire,
-                std::memory_order_relaxed)) [[likely]] {
+                std::memory_order_relaxed)) {
           break;
         }
       }
@@ -1400,7 +1400,7 @@ class hazard {
       // Check that ptr (still or again) holds 'target'.
       {
         T*const tmp = ptr.load(std::memory_order_acquire);
-        if (tmp != target) [[unlikely]] {
+        if (tmp != target) {
           // Clear published value.
           T* expect = target;
           if (!d_.ptr.compare_exchange_strong(
@@ -1413,7 +1413,7 @@ class hazard {
             // pointer that was originally assigned to ptr, or a newly
             // allocated value at the same address, we
             // have no option but to discard it.
-            if (ptr.load(std::memory_order_relaxed) == target) [[unlikely]] {
+            if (ptr.load(std::memory_order_relaxed) == target) {
               return pointer(target, false);
             }
 
@@ -2934,7 +2934,7 @@ noexcept
 
   std::uintptr_t expect = make_refcounter(1, color::white);
   while (get_color(expect) != color::black) {
-    if (get_color(expect) == color::red && !lck.owns_lock()) [[unlikely]] {
+    if (get_color(expect) == color::red && !lck.owns_lock()) {
       // Acquire weak red-promotion lock.
       gen_ptr = generation_.get();
       for (;;) {
@@ -2952,7 +2952,7 @@ noexcept
             expect,
             make_refcounter(get_refs(expect) + 1u, target_color),
             std::memory_order_relaxed,
-            std::memory_order_relaxed)) [[likely]] {
+            std::memory_order_relaxed)) {
       return true;
     }
   }
@@ -2974,7 +2974,7 @@ noexcept
             expect,
             make_refcounter(get_refs(expect) + 1u, target_color),
             std::memory_order_relaxed,
-            std::memory_order_relaxed)) [[likely]] {
+            std::memory_order_relaxed)) {
       return;
     }
   }
@@ -3027,7 +3027,7 @@ inline auto base_control::publisher::lookup(void* addr, std::size_t len)
   assert(pos == map.end() || pos->first.addr > addr);
 
   // Skip back one position, to find highest address range containing addr.
-  if (pos == map.begin()) [[unlikely]] {
+  if (pos == map.begin()) {
     throw std::runtime_error("cycle_ptr: no published control block for given address range.");
   } else {
     --pos;
@@ -3037,7 +3037,7 @@ inline auto base_control::publisher::lookup(void* addr, std::size_t len)
 
   // Verify if range fits.
   if (reinterpret_cast<std::uintptr_t>(pos->first.addr) + pos->first.len
-      >= reinterpret_cast<std::uintptr_t>(addr) + len) [[likely]] {
+      >= reinterpret_cast<std::uintptr_t>(addr) + len) {
     return intrusive_ptr<base_control>(pos->second, true);
   }
 
@@ -3220,8 +3220,8 @@ noexcept
 
     if (src_gen == dst_gen
         || order_invariant(*src_gen, *dst_gen)
-        || (src_gen->seq() & moveable_seq) == moveable_seq) [[unlikely]] {
-      while (src_gen != src.generation_) [[unlikely]] {
+        || (src_gen->seq() & moveable_seq) == moveable_seq) {
+      while (src_gen != src.generation_) {
         src_merge_lck.unlock();
         src_gen = src.generation_.load();
         src_merge_lck = std::shared_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
@@ -3248,7 +3248,7 @@ noexcept
         }
       }
 
-      if (src_gen == dst_gen || order_invariant(*src_gen, *dst_gen)) [[likely]] {
+      if (src_gen == dst_gen || order_invariant(*src_gen, *dst_gen)) {
         break; // break out of for(;;) loop
       }
     }
@@ -3265,7 +3265,7 @@ noexcept
         std::make_tuple(src_gen, std::exchange(src_gc_requested, false)));
 
     // Update dst_gen, in case another merge moved dst away from under us.
-    if (dst_gen != dst.generation_) [[unlikely]] {
+    if (dst_gen != dst.generation_) {
       if (std::exchange(dst_gc_requested, false)) dst_gen->gc_();
       dst_gen = dst.generation_;
     }
@@ -3273,7 +3273,7 @@ noexcept
     // Update src_gen, in case another merge moved src away from under us.
     assert(!src_gc_requested);
     assert(!src_merge_lck.owns_lock());
-    if (src_gen != src.generation_) [[unlikely]] {
+    if (src_gen != src.generation_) {
       src_gen = src.generation_.load();
       src_merge_lck = std::shared_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
     } else {
@@ -3516,7 +3516,7 @@ noexcept
       assert(get_color(expect) != color::black && get_color(expect) != color::white);
       assert(wavefront_begin != controls_.iterator_to(*dst));
 
-      if (wavefront_end == controls_.iterator_to(*dst)) [[unlikely]] {
+      if (wavefront_end == controls_.iterator_to(*dst)) {
         ++wavefront_end;
       } else {
         controls_.splice(wavefront_end, controls_, controls_.iterator_to(*dst));
@@ -3548,7 +3548,7 @@ noexcept
               std::memory_order_relaxed))
         break;
     }
-    if (get_color(expect) == color::white) [[likely]] {
+    if (get_color(expect) == color::white) {
       continue; // Already processed in phase 1.
     }
 
@@ -3568,7 +3568,7 @@ noexcept
                 std::memory_order_relaxed))
           break;
       }
-      if (get_color(expect) != color::red) [[likely]] {
+      if (get_color(expect) != color::red) {
         continue; // Already processed or already in wavefront.
       }
 
@@ -3576,7 +3576,7 @@ noexcept
       assert(wavefront_end != controls_.end());
       assert(wavefront_begin != controls_.iterator_to(*dst));
 
-      if (wavefront_end == controls_.iterator_to(*dst)) [[unlikely]] {
+      if (wavefront_end == controls_.iterator_to(*dst)) {
         ++wavefront_end;
       } else {
         controls_.splice(wavefront_end, controls_, controls_.iterator_to(*dst));
@@ -3814,7 +3814,7 @@ noexcept
 -> void {
   assert(!has_reference || no_red_promotion);
 
-  if (owner_is_expired()) [[unlikely]] { // Reset is a noop when expired.
+  if (owner_is_expired()) { // Reset is a noop when expired.
     // Clear reference if we hold one.
     if (new_dst != nullptr && has_reference) new_dst->release();
     return;
@@ -4051,7 +4051,6 @@ class cycle_base {
     // Protect against leaking out this from inside constructors.
     // This mimics std::shared_ptr, where shared_from_this() is not
     // valid until after the construction completes.
-    [[unlikely]]
     if (control_->under_construction)
       throw std::bad_weak_ptr();
 
@@ -4971,7 +4970,7 @@ class cycle_member_ptr
   auto operator=(cycle_member_ptr&& other)
   noexcept
   -> cycle_member_ptr& {
-    if (this != &other) [[likely]] {
+    if (this != &other) {
       *this = other;
       other.reset();
     }
@@ -5111,7 +5110,7 @@ class cycle_member_ptr
   auto get() const
   noexcept
   -> T* {
-    if (owner_is_expired()) [[unlikely]]
+    if (owner_is_expired())
       return nullptr;
     return target_;
   }
