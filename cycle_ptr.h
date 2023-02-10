@@ -1341,7 +1341,7 @@ class hazard {
         "Cycle_ptr did not expect a platform where cache line is less than or equal to a pointer.");
 
     std::atomic<T*> ptr = nullptr;
-    [[maybe_unused]] char pad_[hardware_destructive_interference_size - sizeof(std::atomic<T*>)];
+    char pad_[hardware_destructive_interference_size - sizeof(std::atomic<T*>)];
   };
 
   /**
