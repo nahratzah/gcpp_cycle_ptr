@@ -147,7 +147,7 @@ TEST(expired_can_assign) {
     cycle_member_ptr<create_destroy_check> ptr;
 
     explicit testclass(bool* td_ptr) : td_ptr(td_ptr) {}
-    ~testclass() { // Test runs during the destructor.
+    ~testclass() noexcept(false) { // Test runs during the destructor.
       ptr = make_cycle<create_destroy_check>(td_ptr);
       CHECK_EQUAL(nullptr, ptr);
     }
@@ -170,7 +170,7 @@ TEST(expired_can_reset) {
     : ptr(make_cycle<int>())
     {}
 
-    ~testclass() { // Test runs during the destructor.
+    ~testclass() noexcept(false) { // Test runs during the destructor.
       CHECK_EQUAL(nullptr, ptr);
       ptr.reset(); // We don't guarantee a specific moment of destruction.
       CHECK_EQUAL(nullptr, ptr);
